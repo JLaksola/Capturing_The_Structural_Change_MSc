@@ -58,7 +58,7 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     if "ey_from_exp_log_ey" not in out.columns:
         out["ey_from_exp_log_ey"] = np.exp(out["log_ey"])
 
-    out["ey_from_cape_lagE"] = np.where(out["cape_lagE"] > 0, 1.0 / out["cape_lagE"], np.nan)
+    out["ey_from_cape_lag_e"] = np.where(out["cape_lagE"] > 0, 1.0 / out["cape_lagE"], np.nan)
     out["ey_from_cape"] = np.where(out["cape"] > 0, 1.0 / out["cape"], np.nan)
 
     if "nominal_earnings_growth_hist_avg" not in out.columns:
@@ -307,7 +307,7 @@ def main() -> None:
         VarSpec("ey_from_exp_log_ey", "levels", "aic12"),
         VarSpec("ey_from_exp_log_ey", "mixed_diff", "fixed12"),
         VarSpec("ey_from_exp_log_ey", "mixed_diff", "aic12"),
-        VarSpec("ey_from_cape_lagE", "levels", "fixed12"),
+        VarSpec("ey_from_cape_lag_e", "levels", "fixed12"),
     ]
 
     step2_specs = [

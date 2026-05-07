@@ -23,8 +23,8 @@ It runs a grid of methodology variants and exports all results to:
 ## What was varied
 ### VAR / Step 1
 - Earnings-yield input used in VAR:
-  - `ey_from_log` (existing `exp(log_ey)`)
-  - `ey_from_cape_lagE` (`1 / cape_lagE`)
+  - `ey_from_exp_log_ey` (existing `exp(log_ey)`)
+  - `ey_from_cape_lag_e` (`1 / cape_lagE`)
 - VAR panel form:
   - `levels`
   - `mixed_diff` (difference `log_ey` and `log_real_yield`, keep others in levels)
@@ -49,7 +49,7 @@ It runs a grid of methodology variants and exports all results to:
 ## Results summary
 - Total tryouts run: **135**
 - Best (closest to Table 3 target pair):
-  - `ey_from_log`, `mixed_diff`, `fixed12`, `rolling_30y`, `current`, `avg_forecast_ey`
+  - `ey_from_exp_log_ey`, `mixed_diff`, `fixed12`, `rolling_30y`, `current`, `avg_forecast_ey`
   - RMSE since 1960: **0.05025**
   - RMSE since 1985: **0.05525**
 
@@ -58,7 +58,7 @@ It runs a grid of methodology variants and exports all results to:
 - Minimum RMSE since 1985 among tryouts: **0.05223**
 - Best class by distance to paper target:
   - `mixed_diff` panel performed better than `levels`
-  - `ey_from_log` outperformed `ey_from_cape_lagE`
+  - `ey_from_exp_log_ey` outperformed `ey_from_cape_lag_e`
 
 ## Interpretation
 With the current data construction and specification space tested here, RMSE remains materially above Davis et al.'s reported nominal RMSE values (4.1% and 3.2%).
