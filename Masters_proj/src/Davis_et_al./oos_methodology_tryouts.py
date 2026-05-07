@@ -7,6 +7,7 @@ from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
 import pandas as pd
+from numpy.linalg import LinAlgError
 from statsmodels.tsa.api import VAR
 
 TARGET_RMSE_1960 = 0.041  # Table 3, two-step VAR (Shiller CAPE), nominal
@@ -31,7 +32,14 @@ class Step2Spec:
 
 
 def project_paths() -> Dict[str, Path]:
-    root = Path(__file__).resolve().parents[2]
+    current = Path(__file__).resolve()
+    root = None
+    for candidate in current.parents:
+        if (candidate / "data").exists() and (candidate / "src").exists():
+            root = candidate
+            break
+    if root is None:
+        raise FileNotFoundError("Could not locate project root containing data/ and src/.")
     return {
         "root": root,
         "processed_csv": root / "data" / "processed" / "davis_et_al_computed_vars.csv",
@@ -47,8 +55,8 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     out.index = pd.to_datetime(out.index)
     out = out.sort_index()
 
-    if "ey_from_log" not in out.columns:
-        out["ey_from_log"] = np.exp(out["log_ey"])
+    if "ey_from_exp_log_ey" not in out.columns:
+        out["ey_from_exp_log_ey"] = np.exp(out["log_ey"])
 
     out["ey_from_cape_lagE"] = np.where(out["cape_lagE"] > 0, 1.0 / out["cape_lagE"], np.nan)
     out["ey_from_cape"] = np.where(out["cape"] > 0, 1.0 / out["cape"], np.nan)
@@ -136,7 +144,7 @@ def generate_forecasts(
 
         try:
             forecast, k_ar = fit_var_and_forecast(train, var_spec.lag_rule)
-        except Exception:
+        except (ValueError, LinAlgError):
             continue
 
         log_ey_at_train_end = np.log(df.loc[train_end, var_spec.ey_variant])
@@ -207,11 +215,10 @@ def step2_return_forecast(
             raise ValueError(f"Unknown dividend_from: {step2_spec.dividend_from}")
 
         r_forecast = annualized_pe_change + g_e + avg_dp
-        r_realized = (
-            df.loc[forecast_date, "ten_year_annualized_stock_nominal_return"]
-            if forecast_date in df.index
-            else np.nan
-        )
+        try:
+            r_realized = df.at[forecast_date, "ten_year_annualized_stock_nominal_return"]
+        except KeyError:
+            r_realized = np.nan
 
         rows.append(
             {
@@ -296,10 +303,10 @@ def main() -> None:
     df = prepare_data(df)
 
     var_specs = [
-        VarSpec("ey_from_log", "levels", "fixed12"),
-        VarSpec("ey_from_log", "levels", "aic12"),
-        VarSpec("ey_from_log", "mixed_diff", "fixed12"),
-        VarSpec("ey_from_log", "mixed_diff", "aic12"),
+        VarSpec("ey_from_exp_log_ey", "levels", "fixed12"),
+        VarSpec("ey_from_exp_log_ey", "levels", "aic12"),
+        VarSpec("ey_from_exp_log_ey", "mixed_diff", "fixed12"),
+        VarSpec("ey_from_exp_log_ey", "mixed_diff", "aic12"),
         VarSpec("ey_from_cape_lagE", "levels", "fixed12"),
     ]
 
