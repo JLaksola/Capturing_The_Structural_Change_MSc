@@ -12,6 +12,8 @@ from statsmodels.tsa.api import VAR
 TARGET_RMSE_1960 = 0.041  # Table 3, two-step VAR (Shiller CAPE), nominal
 TARGET_RMSE_1985 = 0.032  # Table 3, two-step VAR (Shiller CAPE), nominal
 HORIZON_MONTHS = 120
+HORIZON_YEARS = HORIZON_MONTHS / 12
+MIN_TRAIN_OBS = 200
 
 
 @dataclass(frozen=True)
@@ -54,6 +56,11 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     if "nominal_earnings_growth_hist_avg" not in out.columns:
         out["nominal_earnings_growth_hist_avg"] = (
             out["log_nominal_earnings_growth"].expanding(min_periods=1).mean()
+        )
+
+    if "nominal_earnings_growth_30y_avg" not in out.columns:
+        out["nominal_earnings_growth_30y_avg"] = (
+            out["log_nominal_earnings_growth"].rolling(window=360, min_periods=360).mean()
         )
 
     out["nominal_earnings_growth_10y_avg"] = (
@@ -124,7 +131,7 @@ def generate_forecasts(
         train_end = forecast_date - pd.DateOffset(months=1)
         train = panel.loc[train_start:train_end]
 
-        if len(train) < 200:
+        if len(train) < MIN_TRAIN_OBS:
             continue
 
         try:
@@ -169,7 +176,7 @@ def step2_return_forecast(
         log_ey_path = row["log_ey_path"]
         log_ey_t = row["log_ey_t"]
 
-        pct_d_pe = (log_ey_t - log_ey_path[-1]) / 10.0
+        pct_d_pe = (log_ey_t - log_ey_path[-1]) / HORIZON_YEARS
 
         if step2_spec.earnings_growth == "hist_avg":
             g_e = df.loc[train_end, "nominal_earnings_growth_hist_avg"]
