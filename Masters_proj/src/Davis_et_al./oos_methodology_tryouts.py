@@ -58,6 +58,7 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     if "ey_from_exp_log_ey" not in out.columns:
         out["ey_from_exp_log_ey"] = np.exp(out["log_ey"])
 
+    # Derived from CAPE lagged-earnings definition (source column: cape_lagE).
     out["ey_from_cape_lag_e"] = np.where(out["cape_lagE"] > 0, 1.0 / out["cape_lagE"], np.nan)
     out["ey_from_cape"] = np.where(out["cape"] > 0, 1.0 / out["cape"], np.nan)
 
@@ -217,14 +218,17 @@ def step2_return_forecast(
         r_forecast = annualized_pe_change + g_e + avg_dp
         try:
             r_realized = df.at[forecast_date, "ten_year_annualized_stock_nominal_return"]
+            realized_missing = False
         except KeyError:
             r_realized = np.nan
+            realized_missing = True
 
         rows.append(
             {
                 "forecast_date": forecast_date,
                 "r_forecast": r_forecast,
                 "r_realized": r_realized,
+                "realized_missing": realized_missing,
             }
         )
 
