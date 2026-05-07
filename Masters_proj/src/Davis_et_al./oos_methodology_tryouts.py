@@ -15,6 +15,7 @@ TARGET_RMSE_1985 = 0.032  # Table 3, two-step VAR (Shiller CAPE), nominal
 HORIZON_MONTHS = 120
 HORIZON_YEARS = HORIZON_MONTHS // 12
 MIN_TRAIN_OBS = 200
+CAPE_TO_EY_NUMERATOR = 1.0
 
 
 @dataclass(frozen=True)
@@ -59,8 +60,12 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
         out["ey_from_exp_log_ey"] = np.exp(out["log_ey"])
 
     # Derived from CAPE lagged-earnings definition (source column: cape_lagE).
-    out["ey_from_cape_lag_e"] = np.where(out["cape_lagE"] > 0, 1.0 / out["cape_lagE"], np.nan)
-    out["ey_from_cape"] = np.where(out["cape"] > 0, 1.0 / out["cape"], np.nan)
+    out["ey_from_cape_lag_e"] = np.where(
+        out["cape_lagE"] > 0, CAPE_TO_EY_NUMERATOR / out["cape_lagE"], np.nan
+    )
+    out["ey_from_cape"] = np.where(
+        out["cape"] > 0, CAPE_TO_EY_NUMERATOR / out["cape"], np.nan
+    )
 
     if "nominal_earnings_growth_hist_avg" not in out.columns:
         out["nominal_earnings_growth_hist_avg"] = (
@@ -179,6 +184,7 @@ def step2_return_forecast(
     step2_spec: Step2Spec,
 ) -> pd.DataFrame:
     rows = []
+    realized_returns = df["ten_year_annualized_stock_nominal_return"]
 
     for forecast_date, row in forecasts_df.iterrows():
         train_end = row["train_end"]
@@ -216,12 +222,8 @@ def step2_return_forecast(
             raise ValueError(f"Unknown dividend_from: {step2_spec.dividend_from}")
 
         r_forecast = annualized_pe_change + g_e + avg_dp
-        try:
-            r_realized = df.at[forecast_date, "ten_year_annualized_stock_nominal_return"]
-            realized_missing = False
-        except KeyError:
-            r_realized = np.nan
-            realized_missing = True
+        r_realized = realized_returns.get(forecast_date, np.nan)
+        realized_missing = pd.isna(r_realized)
 
         rows.append(
             {
