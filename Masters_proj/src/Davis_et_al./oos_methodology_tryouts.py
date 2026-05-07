@@ -12,7 +12,7 @@ from statsmodels.tsa.api import VAR
 TARGET_RMSE_1960 = 0.041  # Table 3, two-step VAR (Shiller CAPE), nominal
 TARGET_RMSE_1985 = 0.032  # Table 3, two-step VAR (Shiller CAPE), nominal
 HORIZON_MONTHS = 120
-HORIZON_YEARS = HORIZON_MONTHS / 12
+HORIZON_YEARS = HORIZON_MONTHS // 12
 MIN_TRAIN_OBS = 200
 
 
@@ -139,11 +139,11 @@ def generate_forecasts(
         except Exception:
             continue
 
-        log_ey_t = np.log(df.loc[train_end, var_spec.ey_variant])
+        log_ey_at_train_end = np.log(df.loc[train_end, var_spec.ey_variant])
 
         if var_spec.panel_type == "mixed_diff":
             ey_idx = panel_cols.index(ey_col)
-            log_ey_path = log_ey_t + np.cumsum(forecast[:, ey_idx])
+            log_ey_path = log_ey_at_train_end + np.cumsum(forecast[:, ey_idx])
         else:
             ey_idx = panel_cols.index("log_ey_variant")
             log_ey_path = forecast[:, ey_idx]
@@ -152,7 +152,7 @@ def generate_forecasts(
             {
                 "forecast_date": forecast_date,
                 "train_end": train_end,
-                "log_ey_t": log_ey_t,
+                "log_ey_t": log_ey_at_train_end,
                 "log_ey_path": log_ey_path,
                 "k_ar": k_ar,
             }
@@ -176,7 +176,7 @@ def step2_return_forecast(
         log_ey_path = row["log_ey_path"]
         log_ey_t = row["log_ey_t"]
 
-        pct_d_pe = (log_ey_t - log_ey_path[-1]) / HORIZON_YEARS
+        annualized_pe_change = (log_ey_t - log_ey_path[-1]) / HORIZON_YEARS
 
         if step2_spec.earnings_growth == "hist_avg":
             g_e = df.loc[train_end, "nominal_earnings_growth_hist_avg"]
@@ -196,17 +196,17 @@ def step2_return_forecast(
         else:
             raise ValueError(f"Unknown payout: {step2_spec.payout}")
 
-        ey_path = np.exp(log_ey_path)
+        earnings_yield_forecast_path = np.exp(log_ey_path)
         if step2_spec.dividend_from == "avg_forecast_ey":
-            avg_dp = payout_t * ey_path.mean()
+            avg_dp = payout_t * earnings_yield_forecast_path.mean()
         elif step2_spec.dividend_from == "current_ey":
             avg_dp = payout_t * np.exp(log_ey_t)
         elif step2_spec.dividend_from == "terminal_ey":
-            avg_dp = payout_t * ey_path[-1]
+            avg_dp = payout_t * earnings_yield_forecast_path[-1]
         else:
             raise ValueError(f"Unknown dividend_from: {step2_spec.dividend_from}")
 
-        r_forecast = pct_d_pe + g_e + avg_dp
+        r_forecast = annualized_pe_change + g_e + avg_dp
         r_realized = (
             df.loc[forecast_date, "ten_year_annualized_stock_nominal_return"]
             if forecast_date in df.index
