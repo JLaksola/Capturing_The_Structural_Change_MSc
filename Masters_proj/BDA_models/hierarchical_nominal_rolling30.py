@@ -175,6 +175,7 @@ def predict_block(
     model: GibbsResult,
     test_sample: pd.DataFrame,
     train_groups: List[str],
+    rng: np.random.Generator,
 ) -> pd.DataFrame:
     group_to_idx = {g: i for i, g in enumerate(sorted(train_groups))}
 
@@ -194,7 +195,7 @@ def predict_block(
         upper = float(np.quantile(mu_draws, 0.975))
 
         # Log predictive density via posterior predictive mixture
-        eps = np.random.normal(
+        eps = rng.normal(
             0.0,
             np.sqrt(model.sigma2_draws),
             size=model.sigma2_draws.shape[0],
@@ -223,6 +224,7 @@ def predict_block(
 
 def run_oos_forecast(df: pd.DataFrame) -> pd.DataFrame:
     all_results = []
+    rng = np.random.default_rng(2026)
 
     current_date = TEST_START
     while current_date <= TEST_END:
@@ -242,7 +244,12 @@ def run_oos_forecast(df: pd.DataFrame) -> pd.DataFrame:
             continue
 
         model = fit_hierarchical_gibbs(train=train)
-        block_result = predict_block(model, test_sample, train_groups=train["Period30"].astype(str).unique().tolist())
+        block_result = predict_block(
+            model,
+            test_sample,
+            train_groups=train["Period30"].astype(str).unique().tolist(),
+            rng=rng,
+        )
         if not block_result.empty:
             all_results.append(block_result)
 
