@@ -38,7 +38,7 @@ def load_data() -> pd.DataFrame:
     df = df.rename(columns={"date": "Date"})
     df = df.sort_values("Date").reset_index(drop=True)
 
-    # Same 30-year period grouping logic as Hierarchical_final.R
+    # Group each row into fixed 30-year calendar regimes anchored at year 1990.
     year = df["Date"].dt.year
     period_start = 1990 + 30 * ((year - 1990) // 30)
     period_end = period_start + 29
