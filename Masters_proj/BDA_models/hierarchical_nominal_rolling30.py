@@ -14,6 +14,8 @@ TEST_END = pd.Timestamp("2015-09-01")
 STEP_SIZE_MONTHS = 6
 ROLLING_WINDOW_MONTHS = 360
 HORIZON_MONTHS = 120
+LPD_KERNEL_BANDWIDTH = 0.003
+LOG_EPSILON = 1e-12
 
 
 @dataclass
@@ -204,9 +206,10 @@ def predict_block(
         y_true = float(row["Nominal_Return_10Y"])
 
         # Gaussian-kernel approximation for stable log density estimate
-        bw = 0.003
+        # Narrow kernel gives a stable local density proxy around realized returns.
+        bw = LPD_KERNEL_BANDWIDTH
         kern = np.exp(-0.5 * ((y_true - y_draws) / bw) ** 2) / (bw * np.sqrt(2 * np.pi))
-        lpd = float(np.log(np.mean(kern) + 1e-12))
+        lpd = float(np.log(np.mean(kern) + LOG_EPSILON))
 
         preds.append(
             {
