@@ -285,15 +285,15 @@ def summarize(results: pd.DataFrame) -> Dict[str, float]:
 
 def main() -> None:
     root = find_project_root()
-    output_dir = root / "reports"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir = root / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
 
     df = load_data()
     results = run_oos_forecast(df)
     metrics = summarize(results)
 
-    results_path = output_dir / "hierarchical_nominal_rolling30_forecast_results.csv"
-    summary_path = output_dir / "hierarchical_nominal_rolling30_summary.txt"
+    results_path = reports_dir / "hierarchical_nominal_rolling30_forecast_results.csv"
+    summary_path = reports_dir / "hierarchical_nominal_rolling30_summary.txt"
 
     results.to_csv(results_path, index=False)
 
